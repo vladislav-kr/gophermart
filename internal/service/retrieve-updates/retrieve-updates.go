@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/vladislav-kr/gofermart-bonus/internal/clients"
-	"github.com/vladislav-kr/gofermart-bonus/internal/domain/models"
 	"github.com/vladislav-kr/gofermart-bonus/internal/storage"
 )
 
@@ -153,7 +152,7 @@ func (r *retrieveUpdates) updatedOrder(orderID string) (*clients.OrderAccrual, b
 	}
 
 	//еще не рассчитан
-	if ord.Status == models.StatusProcessing || ord.Status == models.StatusNew {
+	if ord.Status == "PROCESSING" || ord.Status == "REGISTERED" {
 		return nil, false
 	}
 	return ord, true

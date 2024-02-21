@@ -19,8 +19,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/vladislav-kr/gofermart-bonus/internal/api/handlers/mocks"
 	"github.com/vladislav-kr/gofermart-bonus/internal/domain/models"
+	"github.com/vladislav-kr/gofermart-bonus/internal/api/handlers/mocks"
 )
 
 func contextWithToken(t *testing.T, userID string) context.Context {
@@ -310,10 +310,12 @@ func TestHandlers_SaveOrder(t *testing.T) {
 				body:     "2377225624",
 				handlers: handlers,
 				mock: mockParam{
-					callMock: false,
+					callMock: true,
+					orderID:  "2377225624",
+					err:      models.ErrUserIDMandatory,
 				},
 			},
-			expectedStatus: http.StatusUnauthorized,
+			expectedStatus: http.StatusInternalServerError,
 		},
 		{
 			name: "неверный формат запроса",
@@ -462,10 +464,11 @@ func TestHandlers_ListOrdersByUser(t *testing.T) {
 				ctx:      context.Background(),
 				handlers: handlers,
 				mock: mockParam{
-					callMock: false,
+					callMock: true,
+					err:      models.ErrUserIDMandatory,
 				},
 			},
-			expectedStatus: http.StatusUnauthorized,
+			expectedStatus: http.StatusInternalServerError,
 		},
 		{
 			name: "нет данных для ответа",
@@ -580,10 +583,11 @@ func TestHandlers_BalanceByUser(t *testing.T) {
 				ctx:      context.Background(),
 				handlers: handlers,
 				mock: mockParam{
-					callMock: false,
+					callMock: true,
+					err:      models.ErrUserIDMandatory,
 				},
 			},
-			expectedStatus: http.StatusUnauthorized,
+			expectedStatus: http.StatusInternalServerError,
 		},
 		{
 			name: "внутренняя ошибка сервера",
@@ -681,14 +685,20 @@ func TestHandlers_WithdrawBonuses(t *testing.T) {
 			args: args{
 				ctx:      context.Background(),
 				handlers: handlers,
+				body:     `{"order":"23772256241","sum":300}`,
 				mock: mockParam{
-					callMock: false,
+					callMock: true,
+					withdraw: models.WithdrawBonuses{
+						Order: "23772256241",
+						Sum:   300,
+					},
+					err: models.ErrUserIDMandatory,
 				},
 			},
-			expectedStatus: http.StatusUnauthorized,
+			expectedStatus: http.StatusInternalServerError,
 		},
 		{
-			name: " неверный формат запроса",
+			name: "неверный формат запроса",
 			args: args{
 				ctx:      contextWithToken(t, "9f059c1c-da6d-4245-9102-d4734a8433db"),
 				handlers: handlers,
@@ -833,10 +843,11 @@ func TestHandlers_HistoryWithdrawals(t *testing.T) {
 				ctx:      context.Background(),
 				handlers: handlers,
 				mock: mockParam{
-					callMock: false,
+					callMock: true,
+					err:      models.ErrUserIDMandatory,
 				},
 			},
-			expectedStatus: http.StatusUnauthorized,
+			expectedStatus: http.StatusInternalServerError,
 		},
 		{
 			name: "внутренняя ошибка сервера",

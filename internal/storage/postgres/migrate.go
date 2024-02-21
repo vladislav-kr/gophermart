@@ -38,6 +38,28 @@ func migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	return nil
 }
 
+func migrateDown(ctx context.Context, pool *pgxpool.Pool) error {
+	goose.SetLogger(
+		slogGoose(logger.Logger()),
+	)
+	goose.SetBaseFS(migrations)
+
+	if err := goose.SetDialect("postgres"); err != nil {
+		return fmt.Errorf("postgres migrate set dialect postgres: %w", err)
+	}
+
+	db := stdlib.OpenDBFromPool(pool)
+
+	if err := goose.DownContext(ctx, db, "migrations"); err != nil {
+		return fmt.Errorf("postgres migrate down: %w", err)
+	}
+
+	if err := db.Close(); err != nil {
+		return fmt.Errorf("postgres migrate close db: %w", err)
+	}
+	return nil
+}
+
 var _ goose.Logger = (*slogGooseLogger)(nil)
 
 func slogGoose(l *slog.Logger) goose.Logger {

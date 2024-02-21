@@ -34,8 +34,8 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//go:generate mockery --name Service
-type Service interface {
+//go:generate mockery --name service --exported
+type service interface {
 	Login(ctx context.Context, cred models.Credentials) (string, error)
 	Register(ctx context.Context, cred models.Credentials) (string, error)
 	Order(ctx context.Context, orderID models.OrderID, userID models.UserID) error
@@ -45,18 +45,18 @@ type Service interface {
 	Withdraw(ctx context.Context, userID models.UserID, withdraw models.WithdrawBonuses) error
 }
 
-//go:generate mockery --name Pinger
-type Pinger interface {
+//go:generate mockery --name pinger --exported
+type pinger interface {
 	Ping(ctx context.Context) error
 }
 
 type Handlers struct {
 	log     *slog.Logger
-	service Service
-	pinger  Pinger
+	service service
+	pinger  pinger
 }
 
-func NewHandlers(s Service, p Pinger) *Handlers {
+func NewHandlers(s service, p pinger) *Handlers {
 	return &Handlers{
 		log: logger.Logger().With(
 			slog.String("comopnetn", "handlers"),
@@ -133,12 +133,7 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) error {
 
 // загрузка пользователем номера заказа для расчёта
 func (h *Handlers) SaveOrder(w http.ResponseWriter, r *http.Request) error {
-	userID, ok := userIDFromContext(r.Context())
-	if !ok {
-		render.Status(r, http.StatusUnauthorized)
-		render.JSON(w, r, response.Error("не авторизован"))
-		return ErrUserIDNotFound
-	}
+	userID, _:= userIDFromContext(r.Context())
 
 	defer r.Body.Close()
 	data, err := io.ReadAll(r.Body)
@@ -182,12 +177,7 @@ func (h *Handlers) SaveOrder(w http.ResponseWriter, r *http.Request) error {
 // получение списка загруженных пользователем номеров заказов,
 // статусов их обработки и информации о начислениях
 func (h *Handlers) ListOrdersByUser(w http.ResponseWriter, r *http.Request) error {
-	userID, ok := userIDFromContext(r.Context())
-	if !ok {
-		render.Status(r, http.StatusUnauthorized)
-		render.JSON(w, r, response.Error("не авторизован"))
-		return ErrUserIDNotFound
-	}
+	userID, _:= userIDFromContext(r.Context())
 
 	ctx, cancel := context.WithTimeout(r.Context(), time.Second*4)
 	defer cancel()
@@ -212,12 +202,7 @@ func (h *Handlers) ListOrdersByUser(w http.ResponseWriter, r *http.Request) erro
 
 // получение текущего баланса счёта баллов лояльности пользователя
 func (h *Handlers) BalanceByUser(w http.ResponseWriter, r *http.Request) error {
-	userID, ok := userIDFromContext(r.Context())
-	if !ok {
-		render.Status(r, http.StatusUnauthorized)
-		render.JSON(w, r, response.Error("не авторизован"))
-		return ErrUserIDNotFound
-	}
+	userID, _:= userIDFromContext(r.Context())
 
 	ctx, cancel := context.WithTimeout(r.Context(), time.Second*4)
 	defer cancel()
@@ -236,12 +221,7 @@ func (h *Handlers) BalanceByUser(w http.ResponseWriter, r *http.Request) error {
 
 // запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа
 func (h *Handlers) WithdrawBonuses(w http.ResponseWriter, r *http.Request) error {
-	userID, ok := userIDFromContext(r.Context())
-	if !ok {
-		render.Status(r, http.StatusUnauthorized)
-		render.JSON(w, r, response.Error("не авторизован"))
-		return ErrUserIDNotFound
-	}
+	userID, _:= userIDFromContext(r.Context())
 
 	withdraw := models.WithdrawBonuses{}
 
@@ -277,12 +257,7 @@ func (h *Handlers) WithdrawBonuses(w http.ResponseWriter, r *http.Request) error
 
 // получение информации о выводе средств с накопительного счёта пользователем
 func (h *Handlers) HistoryWithdrawals(w http.ResponseWriter, r *http.Request) error {
-	userID, ok := userIDFromContext(r.Context())
-	if !ok {
-		render.Status(r, http.StatusUnauthorized)
-		render.JSON(w, r, response.Error("не авторизован"))
-		return ErrUserIDNotFound
-	}
+	userID, _:= userIDFromContext(r.Context())
 
 	ctx, cancel := context.WithTimeout(r.Context(), time.Second*4)
 	defer cancel()

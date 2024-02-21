@@ -32,13 +32,8 @@ func (hs *HTTPServer) Run() error {
 	if errors.Is(err, http.ErrServerClosed) {
 		hs.log.Info("stopped")
 		return nil
-	} else {
-		hs.log.Error(
-			"failed to stopped",
-			logger.Error(err),
-		)
-		return err
 	}
+	return err
 }
 
 func (hs *HTTPServer) Stop(ctx context.Context) error {

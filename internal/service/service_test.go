@@ -337,12 +337,6 @@ func Test_service_Order(t *testing.T) {
 	clnt := mocks.NewAccrual(t)
 	srv := NewService(nil, stor, clnt, nil)
 
-	type mockOrdByNum struct {
-		call  bool
-		order *storage.Order
-		err   error
-	}
-
 	type mockClntOrder struct {
 		call         bool
 		accrualOrder *clients.OrderAccrual
@@ -356,7 +350,7 @@ func Test_service_Order(t *testing.T) {
 	}
 
 	type mockArg struct {
-		ordByNum  mockOrdByNum
+		// ordByNum  mockOrdByNum
 		clntOrder mockClntOrder
 		creOrd    mockCreOrd
 	}
@@ -391,35 +385,23 @@ func Test_service_Order(t *testing.T) {
 			wantErr: models.ErrIncorrectOrderNumber,
 		},
 		{
-			name:    "чтение заказа из хранилища(хранилище недоступно)",
-			service: srv,
-			args: args{
-				orderID: "2377225624",
-				userID:  "fa425e41-5eae-4aa1-b583-8910b48faf7d",
-				mock: mockArg{
-					ordByNum: mockOrdByNum{
-						call:  true,
-						order: nil,
-						err:   storage.ErrInternal,
-					},
-				},
-			},
-			wantErr: models.ErrInternal,
-		},
-		{
 			name:    "номер заказа уже был загружен этим пользователем",
 			service: srv,
 			args: args{
 				orderID: "9278923470",
 				userID:  "05edaa75-4ef7-4cd7-9a79-587016830a53",
 				mock: mockArg{
-					ordByNum: mockOrdByNum{
+					clntOrder: mockClntOrder{
 						call: true,
-						order: &storage.Order{
+						err: fmt.Errorf("client unavailable"),
+					},
+					creOrd: mockCreOrd{
+						call: true,
+						order: storage.CreateOrder{
 							OrderID: "9278923470",
-							UserID:  "05edaa75-4ef7-4cd7-9a79-587016830a53",
+							Status: "NEW",
 						},
-						err: nil,
+						err: storage.ErrAlreadyUploadedUser,
 					},
 				},
 			},
@@ -432,44 +414,21 @@ func Test_service_Order(t *testing.T) {
 				orderID: "23772256667",
 				userID:  "f6750364-a511-46dc-9bf7-9716f381acfe",
 				mock: mockArg{
-					ordByNum: mockOrdByNum{
-						call: true,
-						order: &storage.Order{
-							OrderID: "23772256667",
-							UserID:  "b3ee67a7-3b95-42c0-aa24-15170910aaba",
-						},
-						err: nil,
-					},
-				},
-			},
-			wantErr: models.ErrAlreadyUploadedAnotherUser,
-		},
-		{
-			name:    "внешняя система начислений недоступна",
-			service: srv,
-			args: args{
-				orderID: "346436439",
-				userID:  "24cf5f66-ede1-432e-ba24-53c5aeba2e1e",
-				mock: mockArg{
-					ordByNum: mockOrdByNum{
-						call: true,
-					},
 					clntOrder: mockClntOrder{
 						call: true,
-						err:  fmt.Errorf("internal"),
+						err: fmt.Errorf("client unavailable"),
 					},
 					creOrd: mockCreOrd{
 						call: true,
 						order: storage.CreateOrder{
-							OrderID: "346436439",
-							UserID:  "24cf5f66-ede1-432e-ba24-53c5aeba2e1e",
-							Status:  "NEW",
-							Accrual: 0,
+							OrderID: "23772256667",
+							Status: "NEW",
 						},
+						err: storage.ErrAlreadyUploadedAnotherUser,
 					},
 				},
 			},
-			wantErr: nil,
+			wantErr: models.ErrAlreadyUploadedAnotherUser,
 		},
 		{
 			name:    "создание заказа, ошибка бд",
@@ -478,9 +437,6 @@ func Test_service_Order(t *testing.T) {
 				orderID: "23772256246",
 				userID:  "9c6cdc97-45d8-45fb-aa2d-3e2451cdb343",
 				mock: mockArg{
-					ordByNum: mockOrdByNum{
-						call: true,
-					},
 					clntOrder: mockClntOrder{
 						call: true,
 						accrualOrder: &clients.OrderAccrual{
@@ -493,11 +449,10 @@ func Test_service_Order(t *testing.T) {
 						call: true,
 						order: storage.CreateOrder{
 							OrderID: "23772256246",
-							UserID:  "9c6cdc97-45d8-45fb-aa2d-3e2451cdb343",
 							Status:  "NEW",
 							Accrual: 0,
 						},
-						err: fmt.Errorf("internal"),
+						err: storage.ErrInternal,
 					},
 				},
 			},
@@ -510,9 +465,6 @@ func Test_service_Order(t *testing.T) {
 				orderID: "23772256659",
 				userID:  "74e8729a-ac5f-4dfe-952f-1ec329877520",
 				mock: mockArg{
-					ordByNum: mockOrdByNum{
-						call: true,
-					},
 					clntOrder: mockClntOrder{
 						call: true,
 						accrualOrder: &clients.OrderAccrual{
@@ -525,7 +477,6 @@ func Test_service_Order(t *testing.T) {
 						call: true,
 						order: storage.CreateOrder{
 							OrderID: "23772256659",
-							UserID:  "74e8729a-ac5f-4dfe-952f-1ec329877520",
 							Status:  "NEW",
 							Accrual: 0,
 						},
@@ -538,15 +489,6 @@ func Test_service_Order(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if tt.args.mock.ordByNum.call {
-				stor.On("OrderByNumber",
-					mock.AnythingOfType("*context.timerCtx"),
-					string(tt.args.orderID),
-				).Return(
-					tt.args.mock.ordByNum.order,
-					tt.args.mock.ordByNum.err,
-				)
-			}
 
 			if tt.args.mock.clntOrder.call {
 				clnt.On("Order",

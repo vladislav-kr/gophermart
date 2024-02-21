@@ -73,7 +73,7 @@ func (s *dbStorage) User(ctx context.Context, login string) (*storage.User, erro
 
 	rows, err := s.pool.Query(ctx, query, args)
 	if err != nil {
-		return nil, fmt.Errorf("query uesrs by login %s: %w", login, err)
+		return nil, fmt.Errorf("query uesr %v: %w", err, storage.ErrInternal)
 	}
 
 	if user, err = pgx.CollectOneRow(rows, pgx.RowToStructByName[storage.User]); err != nil {
@@ -81,7 +81,7 @@ func (s *dbStorage) User(ctx context.Context, login string) (*storage.User, erro
 		case errors.Is(err, pgx.ErrNoRows):
 			return nil, storage.ErrNoRecordsFound
 		default:
-			return nil, fmt.Errorf("collect one row: %w", err)
+			return nil, fmt.Errorf("collect one row %v: %w", err, storage.ErrInternal)
 		}
 	}
 
@@ -122,9 +122,12 @@ func (s *dbStorage) CreateUser(ctx context.Context,
 
 	if _, err := tx.Exec(ctx, queryUser, argsUser); err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) &&
-			pgErr.Code == pgerrcode.UniqueViolation {
+		switch {
+		case errors.As(err, &pgErr) &&
+			pgErr.Code == pgerrcode.UniqueViolation:
 			return "", fmt.Errorf("login %s: %w", login, storage.ErrUniqueViolation)
+		default:
+			return "", fmt.Errorf("create user %v: %w", err, storage.ErrInternal)
 		}
 	}
 
@@ -139,61 +142,20 @@ func (s *dbStorage) CreateUser(ctx context.Context,
 	}
 
 	if _, err := tx.Exec(ctx, queryUserBalance, argsUserBalance); err != nil {
-		return "", fmt.Errorf("user_balance insert: %w", err)
+		return "", fmt.Errorf("user_balance insert %v: %w", err, storage.ErrInternal)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return "", fmt.Errorf("commit work create user: %w", err)
+		return "", fmt.Errorf("commit work create user %v: %w", err, storage.ErrInternal)
 	}
 
 	return userUUID, nil
 }
 
-func (s *dbStorage) OrderByNumber(
-	ctx context.Context,
-	orderID string,
-) (*storage.Order, error) {
-
-	query := `
-		SELECT
-			order_id,
-			user_id,
-			status,
-			uploaded_at,
-			changed_at,
-			accrual
-		FROM
-			orders
-		WHERE
-			order_id = @orderID
-		LIMIT 1`
-
-	args := pgx.NamedArgs{"orderID": orderID}
-
-	rows, err := s.pool.Query(ctx, query, args)
-	if err != nil {
-		return nil, fmt.Errorf("query orders by orderID %s %v: %w",
-			orderID,
-			err,
-			storage.ErrInternal,
-		)
-	}
-
-	order, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[storage.Order])
-	if err != nil {
-		switch {
-		case errors.Is(err, pgx.ErrNoRows):
-			return nil, storage.ErrNoRecordsFound
-		default:
-			return nil, fmt.Errorf("collect one row %v: %w", err, storage.ErrInternal)
-		}
-	}
-
-	return &order, nil
-
-}
-
 func (s *dbStorage) CreateOrder(ctx context.Context, userID string, order storage.CreateOrder) error {
+	type addedUser struct {
+		UserID string `db:"user_id"`
+	}
 
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
@@ -206,10 +168,25 @@ func (s *dbStorage) CreateOrder(ctx context.Context, userID string, order storag
 	}()
 
 	query := `
-		INSERT INTO
-			orders (order_id, user_id, status, accrual)
-		VALUES
-			(@orderID, @userID, @status, @accrual)`
+		WITH
+			insert_user_id AS (
+				INSERT INTO
+					orders (order_id, user_id, status, accrual)
+				VALUES
+					(@orderID, @userID, @status, @accrual)
+				ON CONFLICT DO NOTHING returning uuid_nil() as user_id
+			)
+		SELECT
+			user_id 
+		FROM
+			insert_user_id
+		UNION
+		SELECT
+			user_id
+		FROM
+			orders
+		WHERE
+			order_id = @orderID`
 
 	args := pgx.NamedArgs{
 		"orderID": order.OrderID,
@@ -218,24 +195,31 @@ func (s *dbStorage) CreateOrder(ctx context.Context, userID string, order storag
 		"accrual": order.Accrual,
 	}
 
-	if _, err := tx.Exec(ctx, query, args); err != nil {
-		return fmt.Errorf("orders insert, %v: %w", err, storage.ErrConstraints)
+	rows, err := tx.Query(ctx, query, args)
+	if err != nil {
+		return fmt.Errorf("insert into orders %v: %w", err, storage.ErrInternal)
+	}
+
+	retUserID, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[addedUser])
+	if err != nil {
+		return fmt.Errorf("insert into orders collect one row %v: %w", err, storage.ErrInternal)
+	}
+
+	switch {
+	case retUserID.UserID == userID:
+		return storage.ErrAlreadyUploadedUser
+	case retUserID.UserID != userID &&
+		retUserID.UserID != uuid.NullUUID{}.UUID.String():
+		return storage.ErrAlreadyUploadedAnotherUser
 	}
 
 	if order.Accrual > 0 {
 		queryBalance := `
-			UPDATE user_balance balance
+			UPDATE user_balance
 			SET
-				(current) = (
-					SELECT
-						current + @accrual
-					FROM
-						user_balance current_balance
-					WHERE
-						current_balance.user_id = balance.user_id
-				)
+				current = current + @accrual
 			WHERE
-				balance.user_id = @userID`
+				user_id = @userID`
 
 		argsBalance := pgx.NamedArgs{
 			"userID":  userID,
@@ -293,18 +277,11 @@ func (s *dbStorage) BatchUpdateOrder(ctx context.Context, orders []storage.Updat
 	batchBalance := &pgx.Batch{}
 
 	queryBalance := `
-		UPDATE user_balance balance
+		UPDATE user_balance
 		SET
-			(current) = (
-				SELECT
-					current + @accrual
-				FROM
-					user_balance current_balance
-				WHERE
-					current_balance.user_id = balance.user_id
-			)
+			current = current + @accrual
 		WHERE
-			balance.user_id = @userID`
+			user_id = @userID`
 
 	for _, order := range orders {
 		batchBalance.Queue(queryBalance, pgx.NamedArgs{
@@ -488,24 +465,16 @@ func (s *dbStorage) Withdraw(
 	}()
 
 	queryBalance := `
-		UPDATE user_balance balance
+		UPDATE user_balance
 		SET
-			(current, withdrawn) = (
-				SELECT
-					current - @current,
-					withdrawn + @withdrawn
-				FROM
-					user_balance current_balance
-				WHERE
-					current_balance.user_id = balance.user_id
-			)
+			current = current - @sum,
+			withdrawn = withdrawn + @sum
 		WHERE
-			balance.user_id = @userID`
+			user_id = @userID`
 
 	argsBalance := pgx.NamedArgs{
-		"userID":    userID,
-		"current":   withdraw.Sum,
-		"withdrawn": withdraw.Sum,
+		"userID": userID,
+		"sum":    withdraw.Sum,
 	}
 
 	if _, err := tx.Exec(ctx, queryBalance, argsBalance); err != nil {

@@ -9,7 +9,7 @@ type Balance struct {
 
 type CreateOrder struct {
 	OrderID string
-	UserID  string
+	// UserID  string
 	Status  string
 	Accrual float64
 }

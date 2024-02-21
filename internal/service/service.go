@@ -19,7 +19,6 @@ import (
 type Storage interface {
 	CreateUser(ctx context.Context, login string, passwordHash []byte) (string, error)
 	User(ctx context.Context, login string) (*storage.User, error)
-	OrderByNumber(ctx context.Context, orderID string) (*storage.Order, error)
 	CreateOrder(ctx context.Context, userID string, order storage.CreateOrder) error
 	Orders(ctx context.Context, userID string) ([]storage.Order, error)
 	UserBalance(ctx context.Context, userID string) (*storage.Balance, error)
@@ -122,26 +121,12 @@ func (s *service) Register(ctx context.Context, cred models.Credentials) (string
 }
 
 func (s *service) Order(ctx context.Context, orderID models.OrderID, userID models.UserID) error {
-	if !orderID.Validate() {
-		return models.ErrIncorrectOrderNumber
-	}
 	if !userID.Validate() {
 		return models.ErrUserIDMandatory
 	}
 
-	// проверим заказ в нашем хранилище
-	order, err := s.storage.OrderByNumber(ctx, string(orderID))
-	if err != nil && !errors.Is(err, storage.ErrNoRecordsFound) {
-		return fmt.Errorf("order by number %v: %w", err, models.ErrInternal)
-	}
-
-	if order != nil {
-		switch order.UserID {
-		case string(userID):
-			return models.ErrAlreadyUploadedUser
-		default:
-			return models.ErrAlreadyUploadedAnotherUser
-		}
+	if !orderID.Validate() {
+		return models.ErrIncorrectOrderNumber
 	}
 
 	// получим закал из системы расчетов бонусов
@@ -149,22 +134,28 @@ func (s *service) Order(ctx context.Context, orderID models.OrderID, userID mode
 	if err != nil {
 		accrualOrder = &clients.OrderAccrual{
 			Order:  string(orderID),
-			Status: "NEW",
+			Status: models.StatusNew,
 		}
 	}
-	
+
 	if accrualOrder.Status == "REGISTERED" {
-		accrualOrder.Status = "NEW"
+		accrualOrder.Status = models.StatusNew
 	}
 
-	// создаем заказ в нашем хранилище
+	// создаем заказ в хранилище
 	if err := s.storage.CreateOrder(ctx, string(userID),
 		storage.CreateOrder{
 			OrderID: accrualOrder.Order,
-			UserID:  string(userID),
 			Status:  accrualOrder.Status,
 			Accrual: accrualOrder.Accural,
 		}); err != nil {
+		switch {
+		case errors.Is(err, storage.ErrAlreadyUploadedUser):
+			return fmt.Errorf("create order %v: %w", err, models.ErrAlreadyUploadedUser)
+		case errors.Is(err, storage.ErrAlreadyUploadedAnotherUser):
+			return fmt.Errorf("create order %v: %w", err, models.ErrAlreadyUploadedAnotherUser)
+		}
+
 		return fmt.Errorf("create order %v: %w", err, models.ErrInternal)
 	}
 

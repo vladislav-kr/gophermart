@@ -53,32 +53,6 @@ func (_m *Storage) CreateUser(ctx context.Context, login string, passwordHash []
 	return r0, r1
 }
 
-// OrderByNumber provides a mock function with given fields: ctx, orderID
-func (_m *Storage) OrderByNumber(ctx context.Context, orderID string) (*storage.Order, error) {
-	ret := _m.Called(ctx, orderID)
-
-	var r0 *storage.Order
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (*storage.Order, error)); ok {
-		return rf(ctx, orderID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) *storage.Order); ok {
-		r0 = rf(ctx, orderID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*storage.Order)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, orderID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // Orders provides a mock function with given fields: ctx, userID
 func (_m *Storage) Orders(ctx context.Context, userID string) ([]storage.Order, error) {
 	ret := _m.Called(ctx, userID)

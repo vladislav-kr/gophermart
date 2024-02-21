@@ -149,6 +149,7 @@ func (r *retrieveUpdates) updatedOrder(orderID string) (*clients.OrderAccrual, b
 		default:
 			r.addErr(fmt.Errorf("read accural order: %w", err))
 		}
+		return nil, false
 	}
 
 	//еще не рассчитан

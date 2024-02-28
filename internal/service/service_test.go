@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/vladislav-kr/gofermart-bonus/internal/clients"
-	"github.com/vladislav-kr/gofermart-bonus/internal/domain/models"
-	"github.com/vladislav-kr/gofermart-bonus/internal/service/mocks"
-	"github.com/vladislav-kr/gofermart-bonus/internal/storage"
+	"github.com/vladislav-kr/gophermart/internal/clients"
+	"github.com/vladislav-kr/gophermart/internal/domain/models"
+	"github.com/vladislav-kr/gophermart/internal/service/mocks"
+	"github.com/vladislav-kr/gophermart/internal/storage"
 )
 
 func testRSAPrivateKey(t *testing.T) *rsa.PrivateKey {
@@ -393,13 +393,13 @@ func Test_service_Order(t *testing.T) {
 				mock: mockArg{
 					clntOrder: mockClntOrder{
 						call: true,
-						err: fmt.Errorf("client unavailable"),
+						err:  fmt.Errorf("client unavailable"),
 					},
 					creOrd: mockCreOrd{
 						call: true,
 						order: storage.CreateOrder{
 							OrderID: "9278923470",
-							Status: "NEW",
+							Status:  "NEW",
 						},
 						err: storage.ErrAlreadyUploadedUser,
 					},
@@ -416,13 +416,13 @@ func Test_service_Order(t *testing.T) {
 				mock: mockArg{
 					clntOrder: mockClntOrder{
 						call: true,
-						err: fmt.Errorf("client unavailable"),
+						err:  fmt.Errorf("client unavailable"),
 					},
 					creOrd: mockCreOrd{
 						call: true,
 						order: storage.CreateOrder{
 							OrderID: "23772256667",
-							Status: "NEW",
+							Status:  "NEW",
 						},
 						err: storage.ErrAlreadyUploadedAnotherUser,
 					},

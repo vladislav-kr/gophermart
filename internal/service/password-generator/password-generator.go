@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/vladislav-kr/gofermart-bonus/internal/domain/models"
+	"github.com/vladislav-kr/gophermart/internal/domain/models"
 	"golang.org/x/crypto/bcrypt"
 )
 

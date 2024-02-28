@@ -9,8 +9,9 @@ import (
 	"github.com/go-chi/httplog/v2"
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/vladislav-kr/gofermart-bonus/internal/api/handlers"
-	"github.com/vladislav-kr/gofermart-bonus/internal/logger"
+	"github.com/vladislav-kr/gophermart/internal/api/handlers"
+	apiMiddleware "github.com/vladislav-kr/gophermart/internal/api/middleware"
+	"github.com/vladislav-kr/gophermart/internal/logger"
 )
 
 // NewRouter конфигурирует главный роутер
@@ -27,6 +28,8 @@ func NewRouter(h *handlers.Handlers, publicKey *rsa.PublicKey) *chi.Mux {
 			middleware.RequestID,
 			middleware.RealIP,
 			httplog.RequestLogger(log),
+			apiMiddleware.Recoverer,
+			apiMiddleware.RequestIncMertics,
 		)
 		r.Group(func(r chi.Router) {
 			// регистрация пользователя;
@@ -66,6 +69,7 @@ func NewRouter(h *handlers.Handlers, publicKey *rsa.PublicKey) *chi.Mux {
 
 	//запустился
 	router.Get("/live", h.Live)
+	router.Get("/metrics", h.Metrics)
 
 	return router
 }

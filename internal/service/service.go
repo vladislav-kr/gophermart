@@ -8,11 +8,11 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/vladislav-kr/gofermart-bonus/internal/clients"
-	"github.com/vladislav-kr/gofermart-bonus/internal/domain/models"
-	"github.com/vladislav-kr/gofermart-bonus/internal/logger"
-	"github.com/vladislav-kr/gofermart-bonus/internal/service/jwt"
-	"github.com/vladislav-kr/gofermart-bonus/internal/storage"
+	"github.com/vladislav-kr/gophermart/internal/clients"
+	"github.com/vladislav-kr/gophermart/internal/domain/models"
+	"github.com/vladislav-kr/gophermart/internal/logger"
+	"github.com/vladislav-kr/gophermart/internal/service/jwt"
+	"github.com/vladislav-kr/gophermart/internal/storage"
 )
 
 //go:generate mockery --name Storage

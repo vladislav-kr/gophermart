@@ -5,14 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/vladislav-kr/gofermart-bonus/internal/logger"
-	"github.com/vladislav-kr/gofermart-bonus/internal/storage"
+	"github.com/vladislav-kr/gophermart/internal/logger"
+	"github.com/vladislav-kr/gophermart/internal/storage"
 )
 
 var _ storage.Storage = (*dbStorage)(nil)
@@ -37,8 +39,26 @@ func (s *dbStorage) Ping(ctx context.Context) error {
 
 func New(ctx context.Context, cfg Config) (*dbStorage, error) {
 
-	pool, err := pgxpool.New(ctx, cfg.URI)
-	if err != nil {
+	expBackoff := backoff.NewExponentialBackOff()
+	expBackoff.MaxInterval = 10 * time.Second
+	expBackoff.MaxElapsedTime = 20 * time.Second
+	expBackoff.InitialInterval = 1 * time.Second
+	expBackoff.Multiplier = 1.5
+
+	var (
+		pool *pgxpool.Pool
+		err  error
+	)
+
+	if err := backoff.Retry(func() error {
+		if pool, err = pgxpool.New(ctx, cfg.URI); err != nil {
+			return err
+		}
+		if err = pool.Ping(ctx); err != nil {
+			return err
+		}
+		return nil
+	}, expBackoff); err != nil {
 		return nil, fmt.Errorf("postgres connect: %w", err)
 	}
 

@@ -12,10 +12,11 @@ import (
 	"github.com/go-chi/httplog/v2"
 	"github.com/go-chi/render"
 
-	"github.com/vladislav-kr/gofermart-bonus/internal/domain/models"
-	"github.com/vladislav-kr/gofermart-bonus/internal/domain/response"
-	"github.com/vladislav-kr/gofermart-bonus/internal/logger"
-	"github.com/vladislav-kr/gofermart-bonus/internal/service/jwt"
+	"github.com/vladislav-kr/gophermart/internal/domain/models"
+	"github.com/vladislav-kr/gophermart/internal/domain/response"
+	"github.com/vladislav-kr/gophermart/internal/logger"
+	"github.com/vladislav-kr/gophermart/internal/metrics"
+	"github.com/vladislav-kr/gophermart/internal/service/jwt"
 )
 
 var (
@@ -133,7 +134,7 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) error {
 
 // загрузка пользователем номера заказа для расчёта
 func (h *Handlers) SaveOrder(w http.ResponseWriter, r *http.Request) error {
-	userID, _:= userIDFromContext(r.Context())
+	userID, _ := userIDFromContext(r.Context())
 
 	defer r.Body.Close()
 	data, err := io.ReadAll(r.Body)
@@ -177,7 +178,7 @@ func (h *Handlers) SaveOrder(w http.ResponseWriter, r *http.Request) error {
 // получение списка загруженных пользователем номеров заказов,
 // статусов их обработки и информации о начислениях
 func (h *Handlers) ListOrdersByUser(w http.ResponseWriter, r *http.Request) error {
-	userID, _:= userIDFromContext(r.Context())
+	userID, _ := userIDFromContext(r.Context())
 
 	ctx, cancel := context.WithTimeout(r.Context(), time.Second*4)
 	defer cancel()
@@ -202,7 +203,7 @@ func (h *Handlers) ListOrdersByUser(w http.ResponseWriter, r *http.Request) erro
 
 // получение текущего баланса счёта баллов лояльности пользователя
 func (h *Handlers) BalanceByUser(w http.ResponseWriter, r *http.Request) error {
-	userID, _:= userIDFromContext(r.Context())
+	userID, _ := userIDFromContext(r.Context())
 
 	ctx, cancel := context.WithTimeout(r.Context(), time.Second*4)
 	defer cancel()
@@ -221,7 +222,7 @@ func (h *Handlers) BalanceByUser(w http.ResponseWriter, r *http.Request) error {
 
 // запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа
 func (h *Handlers) WithdrawBonuses(w http.ResponseWriter, r *http.Request) error {
-	userID, _:= userIDFromContext(r.Context())
+	userID, _ := userIDFromContext(r.Context())
 
 	withdraw := models.WithdrawBonuses{}
 
@@ -257,7 +258,7 @@ func (h *Handlers) WithdrawBonuses(w http.ResponseWriter, r *http.Request) error
 
 // получение информации о выводе средств с накопительного счёта пользователем
 func (h *Handlers) HistoryWithdrawals(w http.ResponseWriter, r *http.Request) error {
-	userID, _:= userIDFromContext(r.Context())
+	userID, _ := userIDFromContext(r.Context())
 
 	ctx, cancel := context.WithTimeout(r.Context(), time.Second*4)
 	defer cancel()
@@ -284,6 +285,11 @@ func (h *Handlers) HistoryWithdrawals(w http.ResponseWriter, r *http.Request) er
 // сервер запустился
 func (h *Handlers) Live(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
+}
+
+// метрики
+func (h *Handlers) Metrics(w http.ResponseWriter, r *http.Request) {
+	metrics.Mertics().Handler().ServeHTTP(w, r)
 }
 
 // сервер готов принимать запросы

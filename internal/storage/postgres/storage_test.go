@@ -12,7 +12,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"github.com/vladislav-kr/gofermart-bonus/internal/storage"
+	"github.com/vladislav-kr/gophermart/internal/storage"
 )
 
 type testConfig struct {
@@ -58,14 +58,15 @@ func (ts *PostgresTestSuite) SetupSuite() {
 		tcpostgres.WithDatabase(cfg.DBName),
 		tcpostgres.WithUsername(cfg.Username),
 		tcpostgres.WithPassword(cfg.Password),
-		tcpostgres.WithInitScripts(),
 		testcontainers.WithWaitStrategy(
 			wait.ForLog("database system is ready to accept connections").
 				WithOccurrence(2).
 				WithStartupTimeout(5*time.Second),
 		),
 	)
-
+	// if err != nil {
+	// 	ts.T().Skipf("skip docker in docker")
+	// }
 	require.NoError(ts.T(), err)
 
 	cfg.Host, err = pgc.Host(ctx)

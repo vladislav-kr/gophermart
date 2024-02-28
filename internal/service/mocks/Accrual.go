@@ -5,7 +5,7 @@ package mocks
 import (
 	context "context"
 
-	clients "github.com/vladislav-kr/gofermart-bonus/internal/clients"
+	clients "github.com/vladislav-kr/gophermart/internal/clients"
 
 	mock "github.com/stretchr/testify/mock"
 

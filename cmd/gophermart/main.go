@@ -4,12 +4,15 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/vladislav-kr/gofermart-bonus/internal/app"
-	"github.com/vladislav-kr/gofermart-bonus/internal/config"
-	"github.com/vladislav-kr/gofermart-bonus/internal/logger"
+	"github.com/vladislav-kr/gophermart/internal/app"
+	"github.com/vladislav-kr/gophermart/internal/config"
+	"github.com/vladislav-kr/gophermart/internal/logger"
 )
 
 func main() {
+	// _ = os.Setenv("DATABASE_URI", "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable")
+	// _ = os.Setenv("ACCRUAL_SYSTEM_ADDRESS", "http://localhost:8080")
+	// _ = os.Setenv("RUN_ADDRESS", ":3030")
 
 	cfg := config.MustLoad()
 

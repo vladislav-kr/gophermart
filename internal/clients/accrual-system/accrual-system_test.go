@@ -10,7 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/stretchr/testify/assert"
-	"github.com/vladislav-kr/gofermart-bonus/internal/clients"
+	"github.com/vladislav-kr/gophermart/internal/clients"
 )
 
 func TestWithOpton(t *testing.T) {

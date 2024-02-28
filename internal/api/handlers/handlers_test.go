@@ -19,8 +19,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/vladislav-kr/gofermart-bonus/internal/domain/models"
-	"github.com/vladislav-kr/gofermart-bonus/internal/api/handlers/mocks"
+	"github.com/vladislav-kr/gophermart/internal/domain/models"
+	"github.com/vladislav-kr/gophermart/internal/api/handlers/mocks"
 )
 
 func contextWithToken(t *testing.T, userID string) context.Context {

@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/vladislav-kr/gofermart-bonus/internal/logger"
+	"github.com/vladislav-kr/gophermart/internal/logger"
 )
 
 type HTTPServer struct {

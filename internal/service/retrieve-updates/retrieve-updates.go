@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vladislav-kr/gofermart-bonus/internal/clients"
-	"github.com/vladislav-kr/gofermart-bonus/internal/storage"
+	"github.com/vladislav-kr/gophermart/internal/clients"
+	"github.com/vladislav-kr/gophermart/internal/storage"
 )
 
 // locker - блокиратор с ожиданием и уведомлением n-воркеров

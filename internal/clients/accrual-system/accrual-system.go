@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/vladislav-kr/gofermart-bonus/internal/clients"
+	"github.com/vladislav-kr/gophermart/internal/clients"
 )
 
 type accrualSystem struct {
